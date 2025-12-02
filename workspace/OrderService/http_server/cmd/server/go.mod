@@ -1,3 +1,3 @@
-module github.com/EpNKM/week1_HW/workspace/OrderService
+module order
 
 go 1.25.3
