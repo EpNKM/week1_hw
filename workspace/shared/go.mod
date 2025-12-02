@@ -1,4 +1,4 @@
-module github.com/EpNKM/shared
+module github.com/EpNKM/week1_HW/workspace/shared
 
 go 1.25.3
 
