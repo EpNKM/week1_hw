@@ -16,7 +16,7 @@ import (
 	"github.com/go-chi/chi/v5/middleware"
 	"github.com/google/uuid"
 
-	orderV1 "github.com/EpNKM/week1_HW/workspace/shared"
+	orderV1 "github.com/EpNKM/week1_HW/workspace/shared/api"
 )
 
 const (
