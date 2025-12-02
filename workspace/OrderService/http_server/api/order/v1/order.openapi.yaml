@@ -1,0 +1,277 @@
+openapi: 3.0.3
+info:
+  title: OrderService API
+  version: 1.0.0
+  description: API для управления заказами на постройку космических кораблей
+
+x-ogen:
+  target: ./pkg/openapi/order/v1
+  package: order_v1
+  clean: true
+
+servers:
+  - url: http://localhost:8080
+
+tags:
+  - name: Order
+    description: Операции с заказами
+
+paths:
+  /api/v1/orders:
+    post:
+      summary: Создать новый заказ
+      operationId: CreateOrder
+      tags:
+        - Order
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CreateOrderRequest'
+      responses:
+        '201':
+          description: Заказ успешно создан
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/CreateOrderResponse'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '500':
+          $ref: '#/components/responses/InternalServerError'
+        default:
+          description: Unexpected error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiError'
+
+  /api/v1/orders/{order_uuid}:
+    get:
+      summary: Получить заказ по UUID
+      operationId: GetOrder
+      tags:
+        - Order
+      parameters:
+        - name: order_uuid
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      responses:
+        '200':
+          description: Заказ найден
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/OrderResponse'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '500':
+          $ref: '#/components/responses/InternalServerError'
+        default:
+          description: Unexpected error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiError'
+
+    post:
+      summary: Отменить заказ
+      operationId: CancelOrder
+      tags:
+        - Order
+      parameters:
+        - name: order_uuid
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      responses:
+        '204':
+          description: Заказ успешно отменён
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '409':
+          description: Заказ уже оплачен и не может быть отменён
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiError'
+        '500':
+          $ref: '#/components/responses/InternalServerError'
+        default:
+          description: Unexpected error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiError'
+
+  /api/v1/orders/{order_uuid}/pay:
+    post:
+      summary: Оплатить заказ
+      operationId: PayOrder
+      tags:
+        - Order
+      parameters:
+        - name: order_uuid
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/PayOrderRequest'
+      responses:
+        '200':
+          description: Оплата прошла успешно
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PayOrderResponse'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '500':
+          $ref: '#/components/responses/InternalServerError'
+        default:
+          description: Unexpected error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiError'
+
+components:
+  schemas:
+    CreateOrderRequest:
+      type: object
+      required:
+        - user_uuid
+        - part_uuids
+      properties:
+        user_uuid:
+          type: string
+          format: uuid
+        part_uuids:
+          type: array
+          items:
+            type: string
+            format: uuid
+          minItems: 1
+
+    CreateOrderResponse:
+      type: object
+      required:
+        - order_uuid
+        - total_price
+      properties:
+        order_uuid:
+          type: string
+          format: uuid
+        total_price:
+          type: number
+          format: double
+          minimum: 0
+
+    PayOrderRequest:
+      type: object
+      required:
+        - payment_method
+      properties:
+        payment_method:
+          type: string
+          enum:
+            - UNKNOWN
+            - CARD
+            - SBP
+            - CREDIT_CARD
+            - INVESTOR_MONEY
+
+    PayOrderResponse:
+      type: object
+      required:
+        - transaction_uuid
+      properties:
+        transaction_uuid:
+          type: string
+          format: uuid
+
+    OrderResponse:
+      type: object
+      required:
+        - order_uuid
+        - user_uuid
+        - part_uuids
+        - total_price
+        - status
+      properties:
+        order_uuid:
+          type: string
+          format: uuid
+        user_uuid:
+          type: string
+          format: uuid
+        part_uuids:
+          type: array
+          items:
+            type: string
+            format: uuid
+        total_price:
+          type: number
+          format: double
+        transaction_uuid:
+          type: string
+          format: uuid
+          nullable: true
+        payment_method:
+          type: string
+          enum:
+            - UNKNOWN
+            - CARD
+            - SBP
+            - CREDIT_CARD
+            - INVESTOR_MONEY
+        status:
+          type: string
+          enum:
+            - PENDING_PAYMENT
+            - PAID
+            - CANCELLED
+
+    ApiError:
+      type: object
+      required:
+        - message
+      properties:
+        message:
+          type: string
+
+  responses:
+    BadRequest:
+      description: Некорректный запрос (например, невалидные UUID или отсутствующие поля)
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/ApiError'
+
+    NotFound:
+      description: Заказ не найден
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/ApiError'
+
+    InternalServerError:
+      description: Внутренняя ошибка сервера
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/ApiError'
